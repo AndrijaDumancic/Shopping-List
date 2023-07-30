@@ -1,11 +1,13 @@
 const itemForm = document.getElementById("item-form");
 const itemInput = document.getElementById("item-input");
 const itemList = document.getElementById("item-list");
+const clearButton = document.getElementById("clear");
+const itemFilter = document.getElementById("filter");
 
 function addItem(e) {
   e.preventDefault();
   const newItem = itemInput.value;
-  // Validate INput
+  // Validate Input
   if (newItem === "") {
     alert("Please add an item");
     return;
@@ -18,6 +20,8 @@ function addItem(e) {
   const button = createButton("remove-item btn-link text-red");
   li.appendChild(button);
   itemList.appendChild(li);
+
+  checkUI();
   itemInput.value = "";
 }
 function createButton(classes) {
@@ -32,7 +36,50 @@ function createIcon(classes) {
   icon.className = classes;
   return icon;
 }
+function removeItem(e) {
+  if (e.target.parentElement.classList.contains("remove-item"))
+    e.target.parentElement.parentElement.remove();
+  checkUI();
+}
+function clearAll() {
+  if (confirm("Are you sure?")) {
+    while (itemList.hasChildNodes) {
+      itemList.removeChild(itemList.firstChild);
+    }
+  }
+  checkUI();
+}
+
+function filterItems(e) {
+  const items = itemList.querySelectorAll("li");
+  const text = e.target.value.toLowerCase();
+  items.forEach((item) => {
+    const itemName = item.firstChild.textContent.toLowerCase();
+    if (itemName.indexOf(text) != -1) {
+      item.style.display = "flex";
+    } else {
+      item.style.display = "none";
+    }
+  });
+
+  console.log(text);
+}
+
+function checkUI() {
+  const items = itemList.querySelectorAll("li");
+  if (items.length === 0) {
+    clearButton.style.display = "none";
+    itemFilter.style.display = "none";
+  } else {
+    clearButton.style.display = "block";
+    itemFilter.style.display = "block";
+  }
+}
 
 //Event Listeners
 itemForm.addEventListener("submit", addItem);
-itemForm.addEventListener("submit", addItem);
+itemList.addEventListener("click", removeItem);
+clearButton.addEventListener("click", clearAll);
+itemFilter.addEventListener("input", filterItems);
+
+checkUI();
