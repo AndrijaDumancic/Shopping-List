@@ -3,13 +3,36 @@ const itemInput = document.getElementById("item-input");
 const itemList = document.getElementById("item-list");
 const clearButton = document.getElementById("clear");
 const itemFilter = document.getElementById("filter");
+const formBtn = itemForm.querySelector("button");
+let isEditMode = false;
+
+function displayItems() {
+  const itemsFromStorage = getItemsFromStorage("items");
+  itemsFromStorage.forEach((item) => {
+    addItemtoDOM(item);
+  });
+  checkUI();
+}
 
 function onAddItemSubmit(e) {
   e.preventDefault();
   const newItem = itemInput.value;
+
   // Validate Input
   if (newItem === "") {
     alert("Please add an item");
+    return;
+  }
+
+  //check for edit mode
+  if (isEditMode) {
+    const itemToEdit = itemList.querySelector(".edit-mode");
+    removeFromLocalStorage(itemToEdit.textContent);
+    itemToEdit.classList.remove("edit-mode");
+    itemToEdit.remove();
+    isEditMode = false;
+  } else if (checkIfAdded(newItem)) {
+    alert("This item is already in the Shopping List!");
     return;
   }
 
@@ -31,21 +54,6 @@ function addItemtoDOM(item) {
   itemList.appendChild(li);
 }
 
-function addItemToLocalStorage(item) {
-  let itemsFromStorage;
-
-  if (localStorage.getItem("items") === null) {
-    itemsFromStorage = [];
-  } else {
-    itemsFromStorage = JSON.parse(localStorage.getItem("items"));
-  }
-  //Add new Item to Array
-  itemsFromStorage.push(item);
-
-  //Convert to array
-  localStorage.setItem("items", JSON.stringify(itemsFromStorage));
-}
-
 function createButton(classes) {
   const button = document.createElement("button");
   button.className = classes;
@@ -58,17 +66,62 @@ function createIcon(classes) {
   icon.className = classes;
   return icon;
 }
-function removeItem(e) {
-  if (e.target.parentElement.classList.contains("remove-item"))
-    e.target.parentElement.parentElement.remove();
-  checkUI();
+
+function addItemToLocalStorage(item) {
+  const itemsFromStorage = getItemsFromStorage();
+
+  //Add new Item to Array
+  itemsFromStorage.push(item);
+
+  //Convert to array
+  localStorage.setItem("items", JSON.stringify(itemsFromStorage));
+}
+
+function getItemsFromStorage() {
+  let itemsFromStorage;
+
+  if (localStorage.getItem("items") === null) {
+    itemsFromStorage = [];
+  } else {
+    itemsFromStorage = JSON.parse(localStorage.getItem("items"));
+  }
+  return itemsFromStorage;
+}
+
+function onClickItem(e) {
+  if (e.target.parentElement.classList.contains("remove-item")) {
+    removeItem(e.target.parentElement.parentElement);
+  } else {
+    setItemToEdit(e.target);
+  }
+}
+
+function removeItem(item) {
+  if (confirm("Are you sure?")) {
+    //Remove item from DOM
+    item.remove();
+    //Remove item from LocalStorage
+    removeFromLocalStorage(item.textContent);
+
+    checkUI();
+  }
+}
+
+function removeFromLocalStorage(item) {
+  let itemsFromStorage = getItemsFromStorage();
+
+  //Filter out item to be removed
+  itemsFromStorage = itemsFromStorage.filter((i) => i !== item);
+  console.log(itemsFromStorage);
+  //Re-set to localStorage
+  localStorage.setItem("items", JSON.stringify(itemsFromStorage));
 }
 function clearAll() {
-  if (confirm("Are you sure?")) {
-    while (itemList.hasChildNodes) {
-      itemList.removeChild(itemList.firstChild);
-    }
+  while (itemList.firstChild) {
+    itemList.removeChild(itemList.firstChild);
   }
+  localStorage.removeItem("items");
+
   checkUI();
 }
 
@@ -87,7 +140,25 @@ function filterItems(e) {
   console.log(text);
 }
 
+function setItemToEdit(item) {
+  isEditMode = true;
+  itemList
+    .querySelectorAll("li")
+    .forEach((i) => i.classList.remove("edit-mode"));
+  item.classList.add("edit-mode");
+  formBtn.innerHTML = '<i class="fa-solid fa-pen"></i> Update Item';
+  itemInput.value = item.textContent;
+  formBtn.style.backgroundColor = "#228B22";
+}
+
+function checkIfAdded(item) {
+  const itemsFromStorage = getItemsFromStorage();
+  return itemsFromStorage.includes(item);
+}
+
 function checkUI() {
+  itemInput.value = "";
+
   const items = itemList.querySelectorAll("li");
   if (items.length === 0) {
     clearButton.style.display = "none";
@@ -96,12 +167,20 @@ function checkUI() {
     clearButton.style.display = "block";
     itemFilter.style.display = "block";
   }
+  formBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Add Item';
+  formBtn.style.backgroundColor = "#333";
+
+  isEditMode = false;
 }
 
-//Event Listeners
-itemForm.addEventListener("submit", onAddItemSubmit);
-itemList.addEventListener("click", removeItem);
-clearButton.addEventListener("click", clearAll);
-itemFilter.addEventListener("input", filterItems);
+//Initialize app
+function init() {
+  itemForm.addEventListener("submit", onAddItemSubmit);
+  itemList.addEventListener("click", onClickItem);
+  clearButton.addEventListener("click", clearAll);
+  itemFilter.addEventListener("input", filterItems);
+  document.addEventListener("DOMContentLoaded", displayItems);
+  checkUI();
+}
 
-checkUI();
+init();
